@@ -9,6 +9,7 @@ export interface Customer {
   referencia_domicilio: string;
   referencia_foto_url?: string;
   folio_foto_url?: string;
+  maps_link?: string;
   ip_asignada: string;
   megas_contratados: number;
   fecha_instalacion: string;
