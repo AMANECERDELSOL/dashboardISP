@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface ImageUploadProps {
   label: string;
   value?: string;
-  onChange: (file: File | null) => void;
+  onChange: (url: string | null) => void;
+  onFileSelect?: (file: File | null) => Promise<string | null>;
   accept?: string;
 }
 
@@ -13,23 +14,53 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   label,
   value,
   onChange,
+  onFileSelect,
   accept = "image/*"
 }) => {
   const [preview, setPreview] = useState<string | null>(value || null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = useCallback((file: File | null) => {
+  // Update preview when value changes
+  React.useEffect(() => {
+    setPreview(value || null);
+  }, [value]);
+
+  const handleFileChange = useCallback(async (file: File | null) => {
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      setUploading(true);
+      try {
+        // If onFileSelect is provided, use it to upload the file
+        let url: string | null = null;
+        if (onFileSelect) {
+          url = await onFileSelect(file);
+        }
+
+        if (url) {
+          // Use the uploaded URL
+          setPreview(url);
+          onChange(url);
+        } else {
+          // Fallback to local preview
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            setPreview(dataUrl);
+            onChange(dataUrl);
+          };
+          reader.readAsDataURL(file);
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert('Error al subir la imagen');
+      } finally {
+        setUploading(false);
+      }
     } else {
       setPreview(null);
+      onChange(null);
     }
-    onChange(file);
-  }, [onChange]);
+  }, [onChange, onFileSelect]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -55,18 +86,19 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       <label className="block text-sm font-medium text-gray-700 mb-2">
         {label}
       </label>
-      
+
       <motion.div
-        className={`relative border-2 border-dashed rounded-lg p-4 transition-all duration-200 ${
-          isDragging 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
-        }`}
+        className={`relative border-2 border-dashed rounded-lg p-4 transition-all duration-200 ${isDragging
+            ? 'border-blue-400 bg-blue-50'
+            : uploading
+              ? 'border-gray-400 bg-gray-50'
+              : 'border-gray-300 hover:border-gray-400'
+          }`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: uploading ? 1 : 1.02 }}
+        whileTap={{ scale: uploading ? 1 : 0.98 }}
       >
         <AnimatePresence>
           {preview ? (
@@ -95,24 +127,33 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               animate={{ opacity: 1 }}
               className="text-center"
             >
-              <Image className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 mb-2">
-                Arrastra una imagen aquí o haz clic para seleccionar
-              </p>
-              <input
-                type="file"
-                accept={accept}
-                onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                className="hidden"
-                id={`upload-${label}`}
-              />
-              <label
-                htmlFor={`upload-${label}`}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Seleccionar Archivo
-              </label>
+              {uploading ? (
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-2"></div>
+                  <p className="text-sm text-gray-600">Subiendo imagen...</p>
+                </div>
+              ) : (
+                <>
+                  <Image className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">
+                    Arrastra una imagen aquí o haz clic para seleccionar
+                  </p>
+                  <input
+                    type="file"
+                    accept={accept}
+                    onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                    className="hidden"
+                    id={`upload-${label}`}
+                  />
+                  <label
+                    htmlFor={`upload-${label}`}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Seleccionar Archivo
+                  </label>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
