@@ -1,8 +1,6 @@
 import React from 'react';
 import { Customer } from '../types/customer';
-import { X, Phone, MapPin, Wifi, Calendar, CreditCard, Download } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { X, Phone, MapPin, Wifi, Calendar, CreditCard, Download, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import { exportCustomerToPDF } from '../utils/pdfExport';
 
 interface CustomerDetailModalProps {
@@ -34,6 +32,20 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     }
   };
 
+  // Format date correctly without timezone conversion
+  const [year, month, day] = customer.fecha_instalacion.split('-').map(Number);
+  const formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+
+  // Check if a string is a URL
+  const isUrl = (str: string) => {
+    try {
+      new URL(str);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -55,7 +67,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             </button>
           </div>
         </div>
-        
+
         <div className="p-6">
           <div className="mb-6">
             <div className="flex justify-between items-start mb-4">
@@ -65,11 +77,11 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <h4 className="font-semibold text-gray-900 mb-3">Información de Contacto</h4>
-              
+
               <div className="flex items-center text-gray-600">
                 <Phone className="w-5 h-5 mr-3 text-gray-400" />
                 <div>
@@ -77,7 +89,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   <p className="font-medium">{customer.telefono}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start text-gray-600">
                 <MapPin className="w-5 h-5 mr-3 text-gray-400 mt-1" />
                 <div>
@@ -91,13 +103,23 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       Ref: {customer.referencia_domicilio}
                     </p>
                   )}
+                  {customer.maps_link && (
+                    <a
+                      href={customer.maps_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 mt-1 underline"
+                    >
+                      Ver en Google Maps <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <h4 className="font-semibold text-gray-900 mb-3">Información del Servicio</h4>
-              
+
               <div className="flex items-center text-gray-600">
                 <Wifi className="w-5 h-5 mr-3 text-gray-400" />
                 <div>
@@ -106,17 +128,17 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   <p className="text-sm text-gray-500">IP: {customer.ip_asignada}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center text-gray-600">
                 <Calendar className="w-5 h-5 mr-3 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-500">Fecha de Instalación</p>
                   <p className="font-medium">
-                    {format(new Date(customer.fecha_instalacion), 'dd/MM/yyyy', { locale: es })}
+                    {formattedDate}
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center text-gray-600">
                 <CreditCard className="w-5 h-5 mr-3 text-gray-400" />
                 <div>
@@ -126,14 +148,14 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="mt-6 pt-6 border-t">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-gray-500">Folio Fibra/Migración</p>
                 <p className="font-medium">{customer.folio_fibra_migracion}</p>
               </div>
-              
+
               {customer.notas && (
                 <div>
                   <p className="text-sm text-gray-500">Notas</p>
@@ -142,8 +164,37 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* Photos Section */}
+          {(customer.referencia_foto_url || customer.folio_foto_url) && (
+            <div className="mt-6 pt-6 border-t">
+              <h4 className="font-semibold text-gray-900 mb-3">Fotografías</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {customer.referencia_foto_url && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Foto de Referencia</p>
+                    <img
+                      src={customer.referencia_foto_url}
+                      alt="Foto de referencia del domicilio"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                    />
+                  </div>
+                )}
+                {customer.folio_foto_url && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Foto del Folio</p>
+                    <img
+                      src={customer.folio_foto_url}
+                      alt="Foto del folio"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-        
+
         <div className="flex justify-end space-x-3 p-6 border-t bg-gray-50">
           <button
             onClick={onClose}
