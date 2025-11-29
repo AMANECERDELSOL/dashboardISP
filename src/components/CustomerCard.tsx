@@ -2,8 +2,6 @@ import React, { useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Customer } from '../types/customer';
 import { Phone, MapPin, Wifi, Calendar, Download } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { exportCustomerToPDF } from '../utils/pdfExport';
 
 interface CustomerCardProps {
@@ -32,7 +30,11 @@ const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, index })
     }
   }, []);
 
-  const formattedDate = format(new Date(customer.fecha_instalacion), 'dd/MM/yyyy', { locale: es });
+  // Parse date correctly without timezone conversion
+  // fecha_instalacion is a string in format YYYY-MM-DD, we need to display it as-is
+  const [year, month, day] = customer.fecha_instalacion.split('-').map(Number);
+  const formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+
   const statusColor = getStatusColor(customer.estado_pago);
   return (
     <motion.div
@@ -61,23 +63,23 @@ const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, index })
           <Download className="w-5 h-5" />
         </motion.button>
       </div>
-      
+
       <div className="space-y-3">
         <div className="flex items-center text-gray-600">
           <Phone className="w-4 h-4 mr-3 text-gray-400" />
           <span>{customer.telefono}</span>
         </div>
-        
+
         <div className="flex items-center text-gray-600">
           <MapPin className="w-4 h-4 mr-3 text-gray-400" />
           <span className="truncate">{customer.direccion}</span>
         </div>
-        
+
         <div className="flex items-center text-gray-600">
           <Wifi className="w-4 h-4 mr-3 text-gray-400" />
           <span>{customer.megas_contratados} MB - {customer.tipo_instalacion}</span>
         </div>
-        
+
         <div className="flex items-center text-gray-600">
           <Calendar className="w-4 h-4 mr-3 text-gray-400" />
           <span>Instalado: {formattedDate}</span>
