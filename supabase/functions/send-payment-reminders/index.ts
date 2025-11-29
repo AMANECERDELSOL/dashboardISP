@@ -23,15 +23,15 @@ async function sendWhatsAppMessage(
   const cleanPhone = phoneNumber.replace(/[^0-9]/g, '')
   const whatsappNumber = cleanPhone.startsWith('521') ? cleanPhone : `521${cleanPhone}`
 
-  const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
 
   try {
-    console.log(`Mensaje preparado para ${customerName} (${whatsappNumber})`)
-    console.log(`URL de WhatsApp: ${whatsappUrl}`)
-    
+    console.log(`WhatsApp link generado para ${customerName} (${whatsappNumber})`)
+    console.log(`URL: ${whatsappUrl}`)
+
     return {
       success: true,
-      messageId: `whatsapp-${Date.now()}-${whatsappNumber}`
+      messageId: whatsappUrl  // Return the URL as messageId so it can be used
     }
   } catch (error) {
     console.error('Error preparando mensaje de WhatsApp:', error)
@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
 
     if (!customers || customers.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: 'No hay clientes con pagos vencidos',
           count: 0
         }),
@@ -116,8 +116,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: `Recordatorios preparados para ${successfulMessages.length} de ${customers.length} clientes`,
         details: results
       }),
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error en la función:', error)
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido'
       }),
