@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Customer } from '../types/customer';
 import { ImageUpload } from './ImageUpload';
+import { uploadCustomerPhoto } from '../utils/storageService';
 import { X } from 'lucide-react';
 
 interface CustomerFormProps {
@@ -12,6 +13,9 @@ interface CustomerFormProps {
 }
 
 export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onClose }) => {
+  const [referenciaPhotoUrl, setReferenciaPhotoUrl] = useState<string | null>(customer?.referencia_foto_url || null);
+  const [folioPhotoUrl, setFolioPhotoUrl] = useState<string | null>(customer?.folio_foto_url || null);
+
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: customer ? {
       nombre_cliente: customer.nombre_cliente,
@@ -21,6 +25,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
       telefono: customer.telefono,
       ubicacion_region: customer.ubicacion_region,
       referencia_domicilio: customer.referencia_domicilio,
+      maps_link: customer.maps_link || '',
       ip_asignada: customer.ip_asignada,
       megas_contratados: customer.megas_contratados,
       fecha_instalacion: customer.fecha_instalacion,
@@ -38,18 +43,31 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
   const onSubmitForm = (data: any) => {
     onSubmit({
       ...data,
-      megas_contratados: Number(data.megas_contratados)
+      megas_contratados: Number(data.megas_contratados),
+      referencia_foto_url: referenciaPhotoUrl,
+      folio_foto_url: folioPhotoUrl
     });
   };
 
+  const handlePhotoUpload = async (file: File, type: 'referencia' | 'folio') => {
+    try {
+      const customerId = customer?.id || `temp_${Date.now()}`;
+      const url = await uploadCustomerPhoto(file, customerId, type);
+      return url;
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      return null;
+    }
+  };
+
   return (
-    <motion.div 
+    <motion.div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <motion.div 
+      <motion.div
         className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -69,7 +87,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
             <X className="w-5 h-5" />
           </motion.button>
         </div>
-        
+
         <form onSubmit={handleSubmit(onSubmitForm)} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -84,14 +102,14 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.nombre_cliente.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email *
               </label>
               <input
                 type="email"
-                {...register('email', { 
+                {...register('email', {
                   required: 'Este campo es obligatorio',
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -104,7 +122,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Instalación *
@@ -117,7 +135,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <option value="Antena">Antena</option>
               </select>
             </div>
-            
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Dirección *
@@ -130,7 +148,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.direccion.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Teléfono *
@@ -143,7 +161,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.telefono.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Ubicación/Región *
@@ -156,7 +174,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.ubicacion_region.message}</p>
               )}
             </div>
-            
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Referencia del Domicilio *
@@ -169,27 +187,36 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.referencia_domicilio.message}</p>
               )}
             </div>
-            
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link de Google Maps
+              </label>
+              <input
+                {...register('maps_link')}
+                placeholder="https://maps.google.com/..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
             <div>
               <ImageUpload
                 label="Foto de Referencia"
-                onChange={(file) => {
-                  // Handle file upload logic here
-                  console.log('Reference photo:', file);
-                }}
+                value={referenciaPhotoUrl || undefined}
+                onChange={setReferenciaPhotoUrl}
+                onFileSelect={(file) => file ? handlePhotoUpload(file, 'referencia') : Promise.resolve(null)}
               />
             </div>
-            
+
             <div>
               <ImageUpload
                 label="Foto del Folio"
-                onChange={(file) => {
-                  // Handle file upload logic here
-                  console.log('Folio photo:', file);
-                }}
+                value={folioPhotoUrl || undefined}
+                onChange={setFolioPhotoUrl}
+                onFileSelect={(file) => file ? handlePhotoUpload(file, 'folio') : Promise.resolve(null)}
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 IP Asignada *
@@ -202,7 +229,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.ip_asignada.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Megas Contratados *
@@ -216,7 +243,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.megas_contratados.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha de Instalación *
@@ -230,7 +257,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.fecha_instalacion.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Método de Pago *
@@ -243,7 +270,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <option value="Tarjeta">Tarjeta</option>
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Folio Fibra/Migración *
@@ -256,7 +283,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <p className="text-red-500 text-sm mt-1">{errors.folio_fibra_migracion.message}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Estado de Pago *
@@ -270,7 +297,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
                 <option value="Vencido">Vencido</option>
               </select>
             </div>
-            
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Notas
@@ -282,7 +309,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, 
               />
             </div>
           </div>
-          
+
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <motion.button
               whileHover={{ scale: 1.05 }}
